@@ -1,0 +1,112 @@
+#coding=utf-8
+import json
+import urllib2,string
+
+import MySQLdb as mdb
+import time
+
+index = 1
+jifang = 'ALI1'
+
+
+#net.if.in[eth0]  net.if.out[eth0]
+# based url and required header
+url = "http://ali-zabbix.cticloud.cn/api_jsonrpc.php"
+header = {"Content-Type":"application/json"}
+# request json
+data = json.dumps(
+{
+    "jsonrpc": "2.0",
+    "method": "template.get",
+    "params": {
+        "output": "extend",
+        "selectApplications": "extend",
+        "selectTriggers": "extend",
+        "selectItems": "extend",
+        "selectHosts": "extend",
+        "filter": {
+            # "host": [
+            #     "Template OS Linux",
+            #     "Template OS Windows"
+            # ]
+        }
+    },
+    "auth": "9a9bc92f1ef917ae74bd7c550b2e506b",
+    "id": 1
+})
+# create request object
+request = urllib2.Request(url,data)
+for key in header:
+   request.add_header(key,header[key])
+# get host list
+try:
+   result = urllib2.urlopen(request)
+except Exception as e:
+   if hasattr(e, 'reason'):
+       print 'We failed to reach a server.'
+       print 'Reason: ', e.reason
+   elif hasattr(e, 'code'):
+       print 'The server could not fulfill the request.'
+       print 'Error code: ', e.code
+else:
+   response = json.loads(result.read())
+   result.close()
+   print "Number Of Hosts: ", len(response['result'])
+   # print response['result']
+
+   conn= mdb.connect(host='127.0.0.1',port = 3306,user='recode',passwd='12345',db ='INFORMATION_RECORD',charset='utf8')
+   _time = time.strftime("%Y%m%d",time.localtime(time.time()))
+
+
+   for i in response['result']:
+       # print i
+       application = ''
+       # print i['applications']
+       for app in i['applications']:
+           application = application + app['name'] + ','
+
+       items = ''
+       # print i['applications']
+       for item in i['items']:
+           items = items + item['name'] + ','
+
+       hosts = ''
+       # print i['applications']
+       for host in i['hosts']:
+           hosts = hosts + host['name'] + ','
+
+       triggers = ''
+       # print i['applications']
+       for trigger in i['triggers']:
+           triggers = triggers + trigger['description'] + ','
+       #
+       # print i['name']
+       # print i['templateid']
+       # print hosts.strip(string.punctuation)
+       # print application.strip(string.punctuation)
+       # print items.strip(string.punctuation)
+       # print triggers.strip(string.punctuation)
+       # print '-----------------------------------'
+
+       # print i['templateid'],i['name']
+
+       try:
+           # dic = {'id' : '14' , 'time' : _time , 'type' : '其他' , 'description' : '关闭运营中心王壮vpn，有线网、无线网，邮箱' , 'flag' : '0' , 'reason' : '王壮离职' , 'style' : '其他'}
+           conn.autocommit(1)
+           cursor = conn.cursor()
+           value_List = []
+           # tup = (dic['id'] , dic['time'] , dic['type'] , dic['description'] , dic['flag'] , dic['reason'] , dic['style'])
+           tup = (index, i['name'], i['templateid'] , _time, jifang , application.strip(string.punctuation) , items.strip(string.punctuation) , triggers.strip(string.punctuation) , hosts.strip(string.punctuation))
+           value_List.append(tup)
+           sql = "insert into zabbix_template values(%s , %s , %s , %s ,%s , %s , %s , %s ,%s)"
+           x = cursor.executemany(sql , value_List)#x为操作行集
+           conn.commit()
+           cursor.close()
+           index = index + 1
+       except Exception , e:
+           print '操错错误:' + str(e)
+   conn.close()
+
+
+
+
