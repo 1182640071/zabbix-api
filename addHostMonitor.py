@@ -13,7 +13,7 @@ sys.setdefaultencoding('utf-8')
 
 class zabbix_api:
     def __init__(self):
-        self.url = 'http://10.10.57.63/api_jsonrpc.php'
+        self.url = 'http://127.0.0.1/api_jsonrpc.php'
         self.header = {"Content-Type":"application/json"}
 
 
@@ -23,7 +23,7 @@ class zabbix_api:
                            "method": "user.login",
                            "params": {
                                       "user": "Admin",
-                                      "password": "Zvqbc:yotKyl^84e6fvrWjvoc"
+                                      "password": "xxxxx"
                                       },
                            "id": 0
                            })
