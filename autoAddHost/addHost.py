@@ -6,7 +6,7 @@ import fcntl
 import struct
 
 
-url = "http://172.16.22.25:8010/zabbix/api_jsonrpc.php"
+url = "http://aws-zabbix.cticloud.cn/api_jsonrpc.php"
 header = {"Content-Type":"application/json"}
 
 
@@ -21,7 +21,7 @@ def getToken():
         "method": "user.login",
         "params": {
         "user": "Admin",
-        "password": "zabbix"
+        "password": "XXXXXXXX"
     },
     "id": 0
     })
@@ -58,7 +58,8 @@ def getModeHost(token , modle):
         "method":"host.get",
         "params":{
             "selectParentTemplates": "extend",
-            "selectGroups": "extend"
+            "selectGroups": "extend",
+            "selectInterfaces": "extend"
             # "output":["hostid","name"],
             # "groupids":"2",
        },
@@ -90,7 +91,11 @@ def getModeHost(token , modle):
                 for temp in host["parentTemplates"]:
                     templetes.append(temp['templateid'])
                 modeinfo['templete'] = templetes
-                modeinfo['jmxstatus'] = host['jmx_available']
+                modeinfo['jmxstatus'] = []
+                for jmx in host['interfaces']:
+                    if jmx['type'] == '4' :
+                        modeinfo['jmxstatus'].append(jmx['port'])
+                break
     return modeinfo
 
 def addHost(hostname , interface , token , group , templates):
@@ -145,47 +150,44 @@ def get_ip_address(ifname):
 
 # mode = sys.argv[1]
 # hostname = sys.argv[2]
-mode = 'VB_AWS6_CTI_LINK_ELK_1_172.31.1.112'
+mode = 'A_AWS2_SIP_ROUTER2_API_TEMPLATE'
+# mode = 'VB_AWS_SIP_ROUTER_API1_10.10.53.105'
+mode = 'VB_AWS2_CTI_LINK_BIG-Q_REALTIME_CURL_2_10.10.61.251'
 hostname = 'testtest'
-hostIp = get_ip_address('en0')
+# hostIp = get_ip_address('en0')
+hostIp = '111.111.111.111'
 interface = []
 token = getToken()
 modeinfo = getModeHost(token , mode)
 if modeinfo == {}:
     exit(1)
 
-if modeinfo["jmxstatus"] == '1':
-    interface = [{
+interface = [{
              "type": 1,
              "main": 1,
              "useip": 1,
              "ip": hostIp,
              "dns": "",
              "port": "10050"
-              },
-        {
-             "type": 4,
-             "main": 1,
-             "useip": 1,
-             "ip": hostIp,
-             "dns": "",
-             "port": "30000"
-              },]
-else:
-    interface = [{
+              }]
+
+for port in modeinfo["jmxstatus"]:
+    interface.append({
              "type": 1,
              "main": 1,
              "useip": 1,
              "ip": hostIp,
              "dns": "",
-             "port": "10050"
-              },]
+             "port": port
+              })
+
 
 print hostname+hostIp
 print interface
 print token
 print modeinfo['group']
 print modeinfo['templete']
+print modeinfo['jmxstatus']
 
-addHost(hostname+hostIp , interface , token , modeinfo['group'] , modeinfo['templete'])
+# addHost(hostname+hostIp , interface , token , modeinfo['group'] , modeinfo['templete'])
 
